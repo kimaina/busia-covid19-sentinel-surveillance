@@ -1,0 +1,309 @@
+---
+title: "COVID-19 Sentinel Surveillance"
+author: "AMPATH Population Health | Busia County"
+output: 
+  rmdformats::material:
+    self_contained: true
+    thumbnails: true
+    lightbox: true
+    gallery: false
+    highlight: tango
+
+---
+
+```{r setup, include=FALSE}
+options(java.parameters = "-Xmx15g")
+
+knitr::opts_chunk$set(warning=FALSE,
+                      message=FALSE,
+                      echo=FALSE,
+                      #dpi=96,
+                     # fig.width=7,# fig.height=4, # Default figure widths
+                     # dev="png", #dev.args=list(type="cairo"), # The png device
+                      # Change to dev="postscript" if you want the EPS-files
+                      # for submitting. Also remove the dev.args() as the postscript
+                      # doesn't accept the type="cairo" argument.
+                      error=FALSE)
+ 
+# Evaluate the figure caption after the plot
+#knitr::opts_knit$set(eval.after='fig.cap')
+ 
+# Use the table counter that the htmlTable() provides
+options(table_counter = TRUE)
+ 
+# Use the figCapNo() with roman letters
+#options(fig_caption_no_roman = TRUE)
+#options(kableExtra.latex.load_packages = F)
+
+# Then install the Grmd-package by running below code:
+#devtools::install_github("gforge/Grmd")
+
+
+# function to install missing packages
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE, repos='http://cran.rstudio.com/')
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#install.packages('package_name', dependencies=TRUE, repos='http://cran.rstudio.com/')
+
+packages =c( "dplyr",  "readxl","Hmisc","Gmisc", "magrittr", "flextable", "MASS", "tidyverse", "caret", "knitr", "kableExtra","xtable", "stargazer", "ggpubr", "haven", "PerformanceAnalytics", "naniar", "gridExtra", "ggthemes", "TSstudio")
+
+ipak(packages)
+
+# packages not pubished
+#devtools::install_github("kassambara/easyGgplot2")
+library(easyGgplot2)
+
+# packages not pubished
+#devtools::install_github('cttobin/ggthemr')
+#library(ggthemr)
+
+
+select = dplyr::select; summarize = dplyr::summarize; rename = dplyr::rename; mutate = dplyr::mutate;
+
+#ggthemr("flat")
+
+#source("unbalanced_functions.R")
+source("table1_utils.R")
+```
+
+# Explaratory Data Analysis | Tables
+
+The goal of the exploratory analysis is to identify the key predictors, generate insights and dicover trends and patters. Throughout this process we are mainly interested in detecting:
+
+* Correlation and assoicitations
+* Trends in time e.g viral load
+* Outliers
+* Any other key information that might be useful in ML modeling
+
+
+
+
+```{r warning=F,cache=T}
+# Import Dataset
+source("import.r")
+dataset=data
+
+#unique(dataset$site_name.factor)
+
+#str(dataset)
+```
+
+
+
+```{r fig.align='center',warning=FALSE, cache=F}
+na.rm.var=T;stats=T
+dataset=data
+unique(dataset$gender.factor)
+# Getting descriptive statistics 
+mergeDesc(
+  
+  "Age" = getTable1Stats("age","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),  
+  "Gender" = getTable1Stats("gender.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Marital Status" = getTable1Stats("marital_status.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Eduaction Level" = getTable1Stats("what_is_your_educational.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Occupation" = getTable1Stats("what_is_your_occupation.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var)
+          
+          )%>%
+   htmlTable( caption  = "<b> Socio-demographics </b>",useViewer=T,ctable = TRUE, align = 'lcccc',
+              n.cgroup = c(1,4,1 ), cgroup = c('', 'Sentinel Sites', '') ,tfoot="<sup>&Dagger;</sup>"
+              )%>% htmlTable::addHtmlTableStyle(col.rgroup = c("#FFF", "#EEF")) 
+
+
+
+
+mergeDesc(
+  
+  "Travelled outside the county" = getTable1Stats("have_you_travelled_outside.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),  
+   "Previous tested" = getTable1Stats("have_you_been_tested_befor.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+   "Results of previous test" = getTable1Stats("what_was_the_test_result.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Breathing / respiratory symptoms" = getTable1Stats("have_you_experienced_any_b.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Known comorbidities" = getTable1Stats("do_you_have_any_comorbidit.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Exposed to known +ve Contacts" = getTable1Stats("have_you_had_a_contact_wit.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Severity" = getTable1Stats("severity_information.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Patients recovered" = getTable1Stats("patient_recovered.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Patients hospitalized" = getTable1Stats("patient_hospitalized.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Covid19 test results" = getTable1Stats("covid_result.factor","site_name.factor",desc_both,statistics=stats,na.rm=na.rm.var)
+          
+          )%>%
+   htmlTable( caption  = "<b> Clinicals / Syndromic Summaries </b>",useViewer=T,ctable = TRUE, align = 'lcccc',
+              n.cgroup = c(1,4,1 ), cgroup = c('', 'Sentinel Sites', '') ,tfoot="<sup>&Dagger;</sup>"
+              )%>% htmlTable::addHtmlTableStyle(col.rgroup = c("#FFF", "#EEF")) 
+
+
+
+
+mergeDesc(
+  
+  # 
+  #  "Age" = getTable1Stats("age","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),  
+  # "Gender" = getTable1Stats("gender.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  # "Marital Status" = getTable1Stats("marital_status.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  # "Eduaction Level" = getTable1Stats("what_is_your_educational.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+   "Occupation" = getTable1Stats("what_is_your_occupation.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+   "Sentinel Sites" = getTable1Stats("site_name.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Travelled outside the county" = getTable1Stats("have_you_travelled_outside.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),  
+   "Previous tested" = getTable1Stats("have_you_been_tested_befor.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+   "Results of previous test" = getTable1Stats("what_was_the_test_result.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Breathing / respiratory symptoms" = getTable1Stats("have_you_experienced_any_b.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Known comorbidities" = getTable1Stats("do_you_have_any_comorbidit.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Exposed to known +ve Contacts" = getTable1Stats("have_you_had_a_contact_wit.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Severity" = getTable1Stats("severity_information.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Patients recovered" = getTable1Stats("patient_recovered.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var),
+  "Patients hospitalized" = getTable1Stats("patient_hospitalized.factor","covid_result.factor",desc_both,statistics=stats,na.rm=na.rm.var)
+ 
+          
+          )%>%
+   htmlTable( caption  = "<b> Positivity Association </b>",useViewer=T,ctable = TRUE, align = 'lcccc',
+              n.cgroup = c(1,2,1 ), cgroup = c('', 'Covid19 Test Results', '') ,tfoot="<sup>&Dagger;</sup>"
+              )%>% htmlTable::addHtmlTableStyle(col.rgroup = c("#FFF", "#EEF")) 
+
+
+```
+
+# Explaratory Data Analysis | Univariate Plots
+
+For each continuous column, visually check the following: 
+
+1. Variation in the column
+2. Its distribution
+3. Any outliers
+4. q-q plot with normal distribution
+
+
+```{r fig.align='center', cache=T, fig.width=5, warning=FALSE, eval=T}
+suppressMessages({library(highcharter)})
+# Reverse side
+dataset %>%
+  count(site_name.factor,what_is_your_occupation.factor)%>%
+  na.omit()%>% 
+  arrange(desc(n),site_name.factor) %>% 
+hchart( "column", hcaes(x = site_name.factor, y = n, group = what_is_your_occupation.factor),
+        options3d = list(enabled = TRUE, beta = 0, alpha = 0))%>%
+  hc_plotOptions(series = list(dataLabels = list(enabled = TRUE))) %>%
+ hc_plotOptions(series = list(#stacking = "normal",  
+                               dataLabels = list(enabled = TRUE))) %>%
+  hc_xAxis(title = list(text = "")) %>% 
+   hc_yAxis(title = list(text = "Counts")) %>% 
+  hc_chart( options3d = list(enabled = TRUE, beta = 0, alpha = 0))
+
+
+dd =dataset%>% 
+  select(site_name.factor) %>% 
+  filter(!is.na(site_name.factor)) %>% 
+  count(site_name.factor) %>%
+  mutate(name=site_name.factor)
+  
+  highchart() %>% hc_add_series(dd,"pie",innerSize="50%",hcaes(name, n)) %>% 
+   hc_plotOptions(pie =list(dataLabels = list(enabled = TRUE,format="{point.name}: {point.y} ({point.percentage:.2f}%)")))%>%
+   hc_legend(align = "left", verticalAlign = "top",
+            layout = "vertical", x = 0, y = 100) 
+
+```
+
+
+
+
+```{r fig.align='center', cache=T, fig.width=5, warning=FALSE, eval=T}
+dd =dataset%>% 
+  select(covid_result.factor) %>% 
+  filter(!is.na(covid_result.factor)) %>% 
+  count(covid_result.factor) %>%
+  mutate(name=covid_result.factor)
+  
+  highchart() %>% hc_add_series(dd,"pie",innerSize="50%",hcaes(name, n)) %>% 
+   hc_plotOptions(pie =list(dataLabels = list(enabled = TRUE,format="{point.name}: {point.y} ({point.percentage:.2f}%)")))%>%
+   hc_legend(align = "left", verticalAlign = "top",
+            layout = "vertical", x = 0, y = 100)  %>%  hc_title(text = "Overall")
+  
+
+dd =dataset%>% 
+  select(covid_result.factor,site_name.factor) %>% 
+    filter(site_name.factor=="KOCHOLYA") %>% 
+   filter(!is.na(covid_result.factor)) %>% 
+  count(covid_result.factor) %>%
+  mutate(name=covid_result.factor)
+  
+  highchart() %>% hc_add_series(dd,"pie",innerSize="50%",hcaes(name, n)) %>% 
+   hc_plotOptions(pie =list(dataLabels = list(enabled = TRUE,format="{point.name}: {point.y} ({point.percentage:.2f}%)")))%>%
+   hc_legend(align = "left", verticalAlign = "top",
+            layout = "vertical", x = 0, y = 100)  %>%  hc_title(text = "KOCHOLYA")
+  
+  
+  dd =dataset%>% 
+  select(covid_result.factor,site_name.factor) %>% 
+      filter(site_name.factor=="NAMBALE") %>% 
+  filter(!is.na(covid_result.factor)) %>% 
+  count(covid_result.factor) %>%
+  mutate(name=covid_result.factor)
+  
+  highchart() %>% hc_add_series(dd,"pie",innerSize="50%",hcaes(name, n)) %>% 
+   hc_plotOptions(pie =list(dataLabels = list(enabled = TRUE,format="{point.name}: {point.y} ({point.percentage:.2f}%)")))%>%
+   hc_legend(align = "left", verticalAlign = "top",
+            layout = "vertical", x = 0, y = 100)  %>%  hc_title(text = "NAMBALE")
+  
+   dd =dataset%>% 
+  select(covid_result.factor,site_name.factor) %>% 
+      filter(site_name.factor=="MATAYOS") %>% 
+  filter(!is.na(covid_result.factor)) %>% 
+  count(covid_result.factor) %>%
+  mutate(name=covid_result.factor)
+  
+  highchart() %>% hc_add_series(dd,"pie",innerSize="50%",hcaes(name, n)) %>% 
+   hc_plotOptions(pie =list(dataLabels = list(enabled = TRUE,format="{point.name}: {point.y} ({point.percentage:.2f}%)")))%>%
+   hc_legend(align = "left", verticalAlign = "top",
+            layout = "vertical", x = 0, y = 100)  %>%  hc_title(text = "MATAYOS")
+
+
+```
+
+
+```{r fig.align='center', cache=T, fig.width=5, warning=FALSE, eval=T}
+
+# Reverse side
+dataset %>%
+  count(what_is_your_occupation.factor,covid_result.factor)%>%
+  na.omit()%>% 
+  arrange(desc(n),what_is_your_occupation.factor) %>% 
+hchart( "column", hcaes(x = what_is_your_occupation.factor, y = n, group = covid_result.factor),
+        options3d = list(enabled = TRUE, beta = 0, alpha = 0))%>%
+  hc_plotOptions(series = list(dataLabels = list(enabled = TRUE))) %>%
+ hc_plotOptions(series = list(#stacking = "normal",  
+                               dataLabels = list(enabled = TRUE))) %>%
+  hc_xAxis(title = list(text = "")) %>% 
+   hc_yAxis(title = list(text = "Counts")) %>% 
+  hc_chart( options3d = list(enabled = TRUE, beta = 0, alpha = 0)) %>%  hc_title(text = "Occupation Positivity")
+
+
+# Reverse side
+dataset %>%
+  count(have_you_experienced_any_b.factor,covid_result.factor)%>%
+  na.omit()%>% 
+  arrange(desc(n),have_you_experienced_any_b.factor) %>% 
+hchart( "column", hcaes(x = have_you_experienced_any_b.factor, y = n, group = covid_result.factor),
+        options3d = list(enabled = TRUE, beta = 0, alpha = 0))%>%
+  hc_plotOptions(series = list(dataLabels = list(enabled = TRUE))) %>%
+ hc_plotOptions(series = list(#stacking = "normal",  
+                               dataLabels = list(enabled = TRUE))) %>%
+  hc_xAxis(title = list(text = "")) %>% 
+   hc_yAxis(title = list(text = "Counts")) %>% 
+  hc_chart( options3d = list(enabled = TRUE, beta = 0, alpha = 0)) %>%  hc_title(text = "Breathing / Respiratory Symptoms Positivity")
+
+# Reverse side
+dataset %>%
+  count(severity_information.factor,covid_result.factor)%>%
+  na.omit()%>% 
+  arrange(desc(n),severity_information.factor) %>% 
+hchart( "column", hcaes(x = severity_information.factor, y = n, group = covid_result.factor),
+        options3d = list(enabled = TRUE, beta = 0, alpha = 0))%>%
+  hc_plotOptions(series = list(dataLabels = list(enabled = TRUE))) %>%
+ hc_plotOptions(series = list(#stacking = "normal",  
+                               dataLabels = list(enabled = TRUE))) %>%
+  hc_xAxis(title = list(text = "")) %>% 
+   hc_yAxis(title = list(text = "Counts")) %>% 
+  hc_chart( options3d = list(enabled = TRUE, beta = 0, alpha = 0)) %>%  hc_title(text = "Severity")
+
+```
